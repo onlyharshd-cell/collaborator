@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ListingType {
+  BOOK
+  NOTES
+  ELECTRONICS
+  HOSTEL
+  OTHER
+}
+
+enum ListingStatus {
+  AVAILABLE
+  EXCHANGED
+  CLOSED
+}
+
+enum CollaborationType {
+  PROJECT
+  HACKATHON
+  STUDY
+  OPEN_SOURCE
+  STARTUP
+  OTHER
+}
+
+model User {
+  id              String          @id @default(cuid())
+  name            String
+  email           String          @unique
+  passwordHash    String
+  college         String?
+  course          String?
+  year            String?
+  bio             String?
+  skills          String[]        @default([])
+  avatarUrl       String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  listings        Listing[]
+  collaborations  Collaboration[]
+  jobs            Job[]
+  messagesSent    Message[]       @relation("SentMessages")
+  messagesReceived Message[]      @relation("ReceivedMessages")
+  resetTokens      PasswordResetToken[]
+}
+
+model Listing {
+  id          String        @id @default(cuid())
+  title       String
+  description String
+  type        ListingType
+  price       Int?
+  location    String?
+  imageUrl    String?
+  status      ListingStatus @default(AVAILABLE)
+  owner       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId     String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([ownerId])
+}
+
+model Collaboration {
+  id          String            @id @default(cuid())
+  title       String
+  description String
+  type        CollaborationType
+  skills      String[]          @default([])
+  location    String?
+  remote      Boolean           @default(true)
+  owner       User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId     String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([type])
+  @@index([ownerId])
+}
+
+model Job {
+  id          String   @id @default(cuid())
+  title       String
+  company     String
+  description String
+  skills      String[] @default([])
+  location    String?
+  applyUrl    String?
+  postedBy    User     @relation(fields: [postedById], references: [id], onDelete: Cascade)
+  postedById  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([company])
+  @@index([postedById])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  content     String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  senderId    String
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  receiverId  String
+  createdAt   DateTime @default(now())
+
+  @@index([senderId, receiverId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
